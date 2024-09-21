@@ -1,0 +1,5 @@
+textual
+pysqlite3
+Flask
+sqlite-web
+bcrypt
