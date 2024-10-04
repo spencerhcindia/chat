@@ -18,6 +18,7 @@ def create_users_table():
             id integer PRIMARY KEY UNIQUE
             , username text UNIQUE
             , password text
+            , color text
             , banned bool
             , mod bool
             )

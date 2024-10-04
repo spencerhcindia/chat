@@ -9,17 +9,25 @@ def get_db_connection():
     return sqlite3.connect(DB_FILENAME)
 
 
+def hash_password(password: str) -> str:
+    salt = bcrypt.gensalt()
+
+    hash_ = bcrypt.hashpw(password=password.encode(), salt=salt)
+
+    return hash_.decode("utf-8")
+
+
 def create_user(
-    username: str, password: str, banned: bool = False, mod: bool = False
+    username: str, password: str, color: str, banned: bool = False, mod: bool = False
 ) -> bool:
     conn = get_db_connection()
     try:
         conn.execute(
             """
-            INSERT INTO users(username, password, banned, mod)
-            VALUES(?, ?, ?, ?)
+            INSERT INTO users(username, password, color, banned, mod)
+            VALUES(?, ?, ?, ?, ?)
             """,
-            (username, password, banned, mod),
+            (username, password, color, banned, mod),
         )
         conn.commit()
         return True
@@ -60,7 +68,7 @@ def create_message(username: str, message: str):
     conn = get_db_connection()
 
     conn.execute(
-        f"""
+        """
         INSERT INTO messages(userid, createdtime, message)
         VALUES(?, datetime('now'), ?)
         """,

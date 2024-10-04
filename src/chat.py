@@ -17,10 +17,12 @@ for textual here:
     https://textual.textualize.io/guide/
 """
 
+import argparse
 import hashlib
 import random
 import string
 import utilities
+import requests
 from functools import lru_cache
 
 from rich.color import Color
@@ -32,6 +34,24 @@ from textual.app import App, ComposeResult
 from textual.widgets import Input, RichLog, Button
 
 USERNAME = "sven"
+SERVER_URL = ""
+line_break = "\n" + "#" * 40
+HELP = (
+    line_break
+    + "\nHere are the available command options:\n/login\n/register\n/help"
+    + line_break
+    + "\n"
+)
+
+
+def health_check(url):
+    return requests.get(url=url + "/health_check").status_code
+
+
+def register(user: dict) -> str:
+    result = requests.post(f"{SERVER_URL}/register", json=user)
+
+    return result.text
 
 
 @lru_cache  # QUESTION: What does lru_cache do, and why would I use it here?
@@ -150,18 +170,27 @@ class Chat(App):
             return
 
         if message_value.startswith("/"):
-            line_break = "\n" + "#" * 40
-            command = message_value.lstrip("/").lower()
+            command = message_value.lstrip("/").split(" ")
             self.input_box.clear()
-            if command in commands:
-                if command == "help":
-                    self.messages.append(
-                        line_break
-                        + "\nHere are the available command options:\n/login\n/register\n/help"
-                        + line_break
-                        + "\n"
-                    )
+            if command[0] in commands:
+                if command[0] == "help":
+                    self.messages.append(HELP)
                     return
+                elif command[0] == "register":
+                    if not len(command) == 3:
+                        self.messages.append(HELP)
+                        return
+                    else:
+                        user = {
+                            "username": command[1],
+                            "password": command[2],
+                            "color": name2hex(command[1]),
+                            "banned": False,
+                            "mod": False,
+                        }
+                        self.messages.append(register(user=user))
+                        return
+
             else:
                 self.messages.append(
                     line_break
@@ -203,9 +232,23 @@ def main() -> None:
     """
     Run our app :)
     """
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--server-url",
+        help="The server of which we will attempt to connect.",
+        required=True,
+    )
+    args = parser.parse_args()
+    url = args.server_url
 
-    app = Chat()
-    app.run()
+    if health_check(url=url):
+        global SERVER_URL
+        SERVER_URL = url
+        app = Chat()
+        app.run()
+    else:
+        print("Unable to connect to server: " + url)
+        exit()
 
 
 if __name__ == "__main__":
