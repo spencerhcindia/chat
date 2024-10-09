@@ -23,9 +23,9 @@ import json
 import random
 import string
 from functools import lru_cache
+from typing import List, Union
 
 import requests
-from typing import Union
 from rich.color import Color
 from rich.console import RenderableType
 from rich.style import Style
@@ -124,7 +124,7 @@ class Chat(App):
         Things to do once the app is setup maybe
         """
         # QUESTION: What does set_interval do in this context?
-        self.set_interval(1, self.fake_messenger)
+        self.set_interval(1, self.rerender_messages)
         # QUESTION: Why do I call my input box's focus method? What does it do?
         self.input_box.focus()
 
@@ -136,6 +136,14 @@ class Chat(App):
             return utilities.get_user(username=username)
         else:
             return False
+
+    def get_messages(self):
+        try:
+            response = requests.get(url=SERVER_URL + "/get_messages")
+            messages = response.json()
+            return messages
+        except:
+            return []
 
     def fake_messenger(self) -> None:
         """
@@ -179,10 +187,15 @@ class Chat(App):
         Clear and rerender the messages in the log.
         """
         # Clear the message log,
-        self.message_log.clear()
-        # And rewrite our current messages
-        for message in self.messages:
-            self.message_log.write(message)
+        if messages := self.get_messages():
+            self.message_log.clear()
+            # And rewrite our current messages
+            for message in messages:
+                formatted_message = f"[{message['username']}] {message['message']}"
+                styled_message = Text(
+                    formatted_message, style=Style(color=Color.parse(message["color"]))
+                )
+                self.message_log.write(styled_message)
 
     # QUESTION: What is this pattern called, where I put @something on a function?
     # QUESTION: When is this method called?

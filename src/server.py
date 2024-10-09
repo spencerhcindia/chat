@@ -48,5 +48,11 @@ def login():
     return {"response": "Login failed."}, 403
 
 
+@app.route("/get_messages", methods=["GET"])
+def get_messages():
+    messages = utilities.get_messages()
+    return messages
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port="6666")

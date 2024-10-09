@@ -93,3 +93,37 @@ def create_message(user: dict, message: str):
         (id, message),
     )
     conn.commit()
+
+
+def get_messages():
+    conn = get_db_connection()
+
+    messages = conn.execute(
+        """
+            SELECT 
+            users.username
+            , users.color
+            , messages.userid
+            , messages.createdtime
+            , messages.message
+            FROM messages
+            JOIN users ON messages.userid = users.id
+            ORDER BY messages.createdtime ASC
+            LIMIT 100
+        """
+    ).fetchall()
+
+    conn.commit()
+
+    messages_conversion = [
+        {
+            "username": message[0],
+            "color": message[1],
+            "userid": message[2],
+            "createdtime": message[3],
+            "message": message[4],
+        }
+        for message in messages
+    ]
+
+    return messages_conversion
