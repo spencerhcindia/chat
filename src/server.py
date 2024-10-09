@@ -38,5 +38,15 @@ def register():
         return utilities.get_user(username=user["username"])
 
 
+@app.route("/login", methods=["POST"])
+def login():
+    user_input = request.json
+
+    if user := utilities.login(user=user_input):
+        return user, 200
+
+    return {"response": "Login failed."}, 403
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port="6666")

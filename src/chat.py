@@ -19,26 +19,29 @@ for textual here:
 
 import argparse
 import hashlib
+import json
 import random
 import string
-import utilities
-import requests
 from functools import lru_cache
 
+import requests
+from typing import Union
 from rich.color import Color
 from rich.console import RenderableType
 from rich.style import Style
 from rich.text import Text
 from textual import on, work
 from textual.app import App, ComposeResult
-from textual.widgets import Input, RichLog, Button
+from textual.widgets import Button, Input, RichLog
 
-USERNAME = "sven"
+import utilities
+
+USER = ""
 SERVER_URL = ""
 line_break = "\n" + "#" * 40
 HELP = (
     line_break
-    + "\nHere are the available command options:\n/login\n/register\n/help"
+    + "\nHere are the available command options:\n/login <username> <password>\n/register <username> <password>\n/help"
     + line_break
     + "\n"
 )
@@ -52,6 +55,30 @@ def register(user: dict) -> str:
     result = requests.post(f"{SERVER_URL}/register", json=user)
 
     return result.text
+
+
+def login(username: str, password: str) -> Union[dict, None]:
+
+    global USER
+
+    user = {"username": username, "password": password}
+
+    result = requests.post(f"{SERVER_URL}/login", json=user)
+
+    if result.status_code == 200:
+
+        data = json.loads(result.text)
+
+        USER = {
+            "username": data["username"],
+            "password": data["password"],
+            "color": data["color"],
+            "banned": data["banned"],
+            "mod": data["mod"],
+        }
+        return USER
+
+    return None
 
 
 @lru_cache  # QUESTION: What does lru_cache do, and why would I use it here?
@@ -81,6 +108,7 @@ class Chat(App):
         - A message log widget
         - A list to host our messages
         """
+        self.current_user = {"username": ""}
         super().__init__(*args, **kwargs)
         # Sauce it up! We want the input box:
         self.input_box = Input(placeholder="...")
@@ -163,12 +191,13 @@ class Chat(App):
         """
         What happens when we press "enter" in our input box.
         """
+
         commands = ["login", "help", "register"]
         # Don't let us submit blank messages
         # QUESTION: From a usability standpoint, why no blank messages?
+
         if not (message_value := event.value):
             return
-
         if message_value.startswith("/"):
             command = message_value.lstrip("/").split(" ")
             self.input_box.clear()
@@ -188,7 +217,19 @@ class Chat(App):
                             "banned": False,
                             "mod": False,
                         }
-                        self.messages.append(register(user=user))
+                        self.messages.append(
+                            "Welcome " + register(user=user)["username"] + "!"
+                        )
+                        return
+                elif command[0] == "login":
+                    login_res = login(username=command[1], password=command[2])
+                    self.input_box.clear()
+                    if login_res:
+                        self.current_user = login_res
+                        self.messages.append("\nLogin successful!\n")
+                        return
+                    else:
+                        self.messages.append("Login failed, try again.\n")
                         return
 
             else:
@@ -200,23 +241,15 @@ class Chat(App):
                     + line_break
                 )
                 return
-
         # Otherwise...
         # Clear the input box.
         self.input_box.clear()
         # Format the message with our username
         # QUESTION: How can I make my messages appear colorful in the chat?
-        formatted_message = f"[{USERNAME}] {message_value}"
+        formatted_message = f"[{self.current_user['username']}] {message_value}"
         # And then we can add it to our current messages
         self.messages.append(formatted_message)
         # Rerender our message log
-
-    def login() -> dict:
-        USERNAME = input("Enter username: ")
-        PASSWORD = input("Enter password: ")
-        user = utilities.get_user(username=USERNAME)
-        if PASSWORD == user["password"]:
-            return user
 
     # QUESTION: When is an App's 'compose' method called?
     def compose(self) -> ComposeResult:
