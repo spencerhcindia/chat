@@ -1,4 +1,3 @@
-textual
 pysqlite3
 Flask
 sqlite-web
