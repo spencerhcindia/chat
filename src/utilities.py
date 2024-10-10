@@ -80,8 +80,7 @@ def get_user(username: str) -> dict:
         return None
 
 
-def create_message(user: dict, message: str):
-    id = get_user(username=user["username"])["id"]
+def create_message(message: str):
 
     conn = get_db_connection()
 
@@ -90,7 +89,7 @@ def create_message(user: dict, message: str):
         INSERT INTO messages(userid, createdtime, message)
         VALUES(?, datetime('now'), ?)
         """,
-        (id, message),
+        (message["userid"], message["message"]),
     )
     conn.commit()
 

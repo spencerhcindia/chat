@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 @app.route("/health_check", methods=["GET"])
 def health_check():
-    return "200 Ok", 200
+    return "200 OK", 200
 
 
 @app.route("/register", methods=["POST"])
@@ -52,6 +52,15 @@ def login():
 def get_messages():
     messages = utilities.get_messages()
     return messages
+
+
+@app.route("/create_message", methods=["PUT"])
+def create_message():
+    message = request.json
+
+    utilities.create_message(message=message)
+
+    return "Good job re tard", 200
 
 
 if __name__ == "__main__":

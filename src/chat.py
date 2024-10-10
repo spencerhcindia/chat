@@ -70,6 +70,7 @@ def login(username: str, password: str) -> Union[dict, None]:
         data = json.loads(result.text)
 
         USER = {
+            "userid": data["id"],
             "username": data["username"],
             "password": data["password"],
             "color": data["color"],
@@ -139,11 +140,18 @@ class Chat(App):
 
     def get_messages(self):
         try:
-            response = requests.get(url=SERVER_URL + "/get_messages")
+            response = requests.get(f"{SERVER_URL}/get_messages")
             messages = response.json()
             return messages
         except:
             return []
+
+    def create_message(self, message: dict):
+
+        result = requests.put(f"{SERVER_URL}/create_message", json=message)
+
+        if result.status_code == 200:
+            self.rerender_messages()
 
     def fake_messenger(self) -> None:
         """
@@ -254,9 +262,15 @@ class Chat(App):
                     + line_break
                 )
                 return
+
         # Otherwise...
         # Clear the input box.
         self.input_box.clear()
+
+        self.create_message(
+            {"userid": self.current_user["userid"], "message": message_value}
+        )
+
         # Format the message with our username
         # QUESTION: How can I make my messages appear colorful in the chat?
         formatted_message = f"[{self.current_user['username']}] {message_value}"
