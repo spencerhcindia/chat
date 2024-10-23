@@ -25,6 +25,7 @@ import string
 from functools import lru_cache
 from typing import List, Union
 
+import jwt
 import requests
 from rich.color import Color
 from rich.console import RenderableType
@@ -38,11 +39,11 @@ import utilities
 
 USER = ""
 SERVER_URL = ""
-line_break = "\n" + "#" * 40
+LINE_BREAK = "\n" + "#" * 40
 HELP = (
-    line_break
+    LINE_BREAK
     + "\nHere are the available command options:\n/login <username> <password>\n/register <username> <password>\n/help"
-    + line_break
+    + LINE_BREAK
     + "\n"
 )
 
@@ -80,6 +81,23 @@ def login(username: str, password: str) -> Union[dict, None]:
         return USER
 
     return None
+
+
+def logout():
+
+    global USER
+
+    USER = ""
+
+
+def encrpytshn(payload: dict):
+
+    return jwt.encode(payload=payload, key="secret", algorithm="HS256")
+
+
+def decrpytshn(message: str):
+    res = jwt.decode(message, key="secret", algorithms=["HS256"])
+    return str(res)
 
 
 @lru_cache  # QUESTION: What does lru_cache do, and why would I use it here?
@@ -125,7 +143,9 @@ class Chat(App):
         Things to do once the app is setup maybe
         """
         # QUESTION: What does set_interval do in this context?
-        self.set_interval(1, self.rerender_messages)
+        # self.set_interval(1, self.rerender_messages)
+        self.rerender_messages
+
         # QUESTION: Why do I call my input box's focus method? What does it do?
         self.input_box.focus()
 
@@ -213,7 +233,7 @@ class Chat(App):
         What happens when we press "enter" in our input box.
         """
 
-        commands = ["login", "help", "register"]
+        commands = ["login", "help", "register", "logout", "encrypt", "decrypt"]
         # Don't let us submit blank messages
         # QUESTION: From a usability standpoint, why no blank messages?
 
@@ -238,9 +258,7 @@ class Chat(App):
                             "banned": False,
                             "mod": False,
                         }
-                        self.messages.append(
-                            "Welcome " + register(user=user)["username"] + "!"
-                        )
+                        self.messages.append("Welcome " + register(user=user) + "!")
                         return
                 elif command[0] == "login":
                     login_res = login(username=command[1], password=command[2])
@@ -248,18 +266,52 @@ class Chat(App):
                     if login_res:
                         self.current_user = login_res
                         self.messages.append("\nLogin successful!\n")
+                        self.rerender_messages()
                         return
                     else:
                         self.messages.append("Login failed, try again.\n")
                         return
+                elif command[0] == "logout":
+                    logout()
+                    self.message_log.clear()
+                    return
+                elif command[0] == "encrypt":
+                    my_dick = {command[1]: command[2]}
+                    enc_message = encrpytshn(my_dick)
+                    self.create_message(
+                        {
+                            "userid": self.current_user["userid"],
+                            "message": enc_message,
+                        }
+                    )
+                    formatted_message = (
+                        f"[{self.current_user['username']}] {enc_message}"
+                    )
+                    # And then we can add it to our current messages
+                    self.messages.append(formatted_message)
+                    return
+                elif command[0] == "decrypt":
+                    dec_message = decrpytshn(message=command[1])
+                    self.create_message(
+                        {
+                            "userid": self.current_user["userid"],
+                            "message": dec_message,
+                        }
+                    )
+                    formatted_message = (
+                        f"[{self.current_user['username']}] {dec_message}"
+                    )
+                    # And then we can add it to our current messages
+                    self.messages.append(formatted_message)
+                    return
 
             else:
                 self.messages.append(
-                    line_break
+                    LINE_BREAK
                     + "\n\nUnrecognized command: /"
                     + command
                     + "\n"
-                    + line_break
+                    + LINE_BREAK
                 )
                 return
 
