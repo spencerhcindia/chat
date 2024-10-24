@@ -46,6 +46,7 @@ HELP = (
     + LINE_BREAK
     + "\n"
 )
+SECRET = ""
 
 
 def health_check(url):
@@ -68,16 +69,8 @@ def login(username: str, password: str) -> Union[dict, None]:
 
     if result.status_code == 200:
 
-        data = json.loads(result.text)
+        USER = result.text
 
-        USER = {
-            "userid": data["id"],
-            "username": data["username"],
-            "password": data["password"],
-            "color": data["color"],
-            "banned": data["banned"],
-            "mod": data["mod"],
-        }
         return USER
 
     return None
@@ -88,16 +81,6 @@ def logout():
     global USER
 
     USER = ""
-
-
-def encrpytshn(payload: dict):
-
-    return jwt.encode(payload=payload, key="secret", algorithm="HS256")
-
-
-def decrpytshn(message: str):
-    res = jwt.decode(message, key="secret", algorithms=["HS256"])
-    return str(res)
 
 
 @lru_cache  # QUESTION: What does lru_cache do, and why would I use it here?
@@ -144,7 +127,6 @@ class Chat(App):
         """
         # QUESTION: What does set_interval do in this context?
         # self.set_interval(1, self.rerender_messages)
-        self.rerender_messages
 
         # QUESTION: Why do I call my input box's focus method? What does it do?
         self.input_box.focus()
@@ -159,16 +141,26 @@ class Chat(App):
             return False
 
     def get_messages(self):
+        global USER
         try:
-            response = requests.get(f"{SERVER_URL}/get_messages")
+            if not USER:
+                return []
+            headers = {"Authorization": f"Bearer {USER}"}
+            response = requests.get(f"{SERVER_URL}/get_messages", headers=headers)
+
             messages = response.json()
             return messages
         except:
             return []
 
     def create_message(self, message: dict):
-
-        result = requests.put(f"{SERVER_URL}/create_message", json=message)
+        global USER
+        if not USER:
+            return
+        headers = {"Authorization": f"Bearer {USER}"}
+        result = requests.put(
+            f"{SERVER_URL}/create_message", json=message, headers=headers
+        )
 
         if result.status_code == 200:
             self.rerender_messages()
@@ -233,7 +225,7 @@ class Chat(App):
         What happens when we press "enter" in our input box.
         """
 
-        commands = ["login", "help", "register", "logout", "encrypt", "decrypt"]
+        commands = ["login", "help", "register", "logout"]
         # Don't let us submit blank messages
         # QUESTION: From a usability standpoint, why no blank messages?
 
@@ -275,35 +267,6 @@ class Chat(App):
                     logout()
                     self.message_log.clear()
                     return
-                elif command[0] == "encrypt":
-                    my_dick = {command[1]: command[2]}
-                    enc_message = encrpytshn(my_dick)
-                    self.create_message(
-                        {
-                            "userid": self.current_user["userid"],
-                            "message": enc_message,
-                        }
-                    )
-                    formatted_message = (
-                        f"[{self.current_user['username']}] {enc_message}"
-                    )
-                    # And then we can add it to our current messages
-                    self.messages.append(formatted_message)
-                    return
-                elif command[0] == "decrypt":
-                    dec_message = decrpytshn(message=command[1])
-                    self.create_message(
-                        {
-                            "userid": self.current_user["userid"],
-                            "message": dec_message,
-                        }
-                    )
-                    formatted_message = (
-                        f"[{self.current_user['username']}] {dec_message}"
-                    )
-                    # And then we can add it to our current messages
-                    self.messages.append(formatted_message)
-                    return
 
             else:
                 self.messages.append(
@@ -319,16 +282,7 @@ class Chat(App):
         # Clear the input box.
         self.input_box.clear()
 
-        self.create_message(
-            {"userid": self.current_user["userid"], "message": message_value}
-        )
-
-        # Format the message with our username
-        # QUESTION: How can I make my messages appear colorful in the chat?
-        formatted_message = f"[{self.current_user['username']}] {message_value}"
-        # And then we can add it to our current messages
-        self.messages.append(formatted_message)
-        # Rerender our message log
+        self.create_message({"message": message_value})
 
     # QUESTION: When is an App's 'compose' method called?
     def compose(self) -> ComposeResult:

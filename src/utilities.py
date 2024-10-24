@@ -10,6 +10,29 @@ def get_db_connection():
     return sqlite3.connect("/home/spencer/Desktop/programming/chat/chat.db")
 
 
+def get_userid(username: str) -> int:
+    conn = get_db_connection()
+
+    user = conn.execute(
+        """
+        SELECT
+        username
+        , password
+        , banned
+        , mod
+        , id
+        , color
+        FROM users
+        WHERE username = ?
+        """,
+        (username,),
+    ).fetchone()
+    if user:
+        return user[4]
+    else:
+        return None
+
+
 def hash_password(password: str) -> str:
     salt = bcrypt.gensalt()
 
@@ -21,7 +44,8 @@ def hash_password(password: str) -> str:
 def login(user: dict) -> Union[dict, None]:
 
     user_pass = user["password"]
-    db_user = get_user(username=user["username"])
+    userid = get_userid(username=user["username"])
+    db_user = get_user(userid=userid)
     if db_user:
         user_pass = user["password"]
         db_pass = db_user["password"]
@@ -50,7 +74,7 @@ def create_user(
         return False
 
 
-def get_user(username: str) -> dict:
+def get_user(userid: str) -> dict:
     conn = get_db_connection()
 
     user = conn.execute(
@@ -63,13 +87,13 @@ def get_user(username: str) -> dict:
         , id
         , color
         FROM users
-        WHERE username = ?
+        WHERE id = ?
         """,
-        (username,),
+        (userid,),
     ).fetchone()
     if user:
         return {
-            "id": user[4],
+            "userid": user[4],
             "username": user[0],
             "password": user[1],
             "banned": bool(user[2]),
@@ -80,7 +104,7 @@ def get_user(username: str) -> dict:
         return None
 
 
-def create_message(message: str):
+def create_message(userid: str, message: str):
 
     conn = get_db_connection()
 
@@ -89,7 +113,7 @@ def create_message(message: str):
         INSERT INTO messages(userid, createdtime, message)
         VALUES(?, datetime('now'), ?)
         """,
-        (message["userid"], message["message"]),
+        (userid, message),
     )
     conn.commit()
 
