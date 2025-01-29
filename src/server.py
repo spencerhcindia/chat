@@ -58,12 +58,12 @@ def validate_token(toeken: str):
             datetime.datetime.now().timestamp() - decrypted_token["session_start"]
             > 7200
         ):
-            abort(401, "Token expired. And you will be too.")
+            abort(401, "Token expired. And you will too...")
         if utilities.get_user(decrypted_token["userid"]):
             return decrypted_token["userid"]
         abort(
             404,
-            "I'm thinking probably this user doesn't exist, or perhaps we deleted your parents.",
+            "I'm thinking probably this user doesn't exist...",
         )
     except jwt.exceptions.DecodeError:
         abort(400, "Unable to decrypt token.")
@@ -131,7 +131,7 @@ def create_message():
 
     utilities.create_message(userid=userid, message=message)
 
-    return "Good job re tard", 200
+    return "Good job!", 200
 
 
 if __name__ == "__main__":
